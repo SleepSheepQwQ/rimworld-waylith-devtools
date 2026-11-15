@@ -1,0 +1,21 @@
+name: tests
+
+# The decision layer (src/Core/SnapPolicy.cs) is pure C#: no game assemblies, no engine, no device.
+# The engine layer (src/Engine) is built against the port's reference assemblies, which are not
+# redistributable - see README section 5 for the local build recipe.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Unit tests (snap policy)
+        run: dotnet test tests/SnapPolicy/SnapPolicy.csproj -c Release -v minimal

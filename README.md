@@ -65,25 +65,36 @@ cat AgentDevTools/About.xml \
 
 日志：`files/game/agentdevtools.log`（**不是** logcat）。
 
+真实输出形如（v1.1.0）：
+
 ```
-AgentDevTools 1.0.0.0 bootstrapping, mode=auto
-patched Verse.UI.MouseMapPosition (closed over Vector3)
-patched PortUI.Candidates (closed over Vector3)
+BUILD 1.1.0 / AgentDevTools 1.1.0.0 bootstrapping, mode=auto
+patched RimWorld.Selector.HandleMapClicks -> HandleMapClicks() in Assembly-CSharp
+patched PortUI.Candidates -> Candidates(Vector3) in PortUI
 AgentDevTools ready: patches ok=5 failed=0, snap=auto, pick=port
+tap ignored: 2 fingers down (gesture, not a tap)
+debug tool fired at (123, 0, 45) (snapped: footprint)
+debug tool fired at (120, 0, 40) (raw tap)
 ```
 
-每次点击会写一行，说明它为什么这样决定：
-
-```
-click cell=(123,0,45) tool=Kill thing=yes cands=3 pick=footprint dist=0.4px -> snapped
-click cell=(120,0,40) tool=Terrain cands=0 -> raw cell
-```
+判据：
 
 | 看到 | 含义 |
 |---|---|
-| `patches ok=5 failed=0` | 五个补丁全部命中 |
-| `failed>0` + `skip …` | 某个目标在本次版本里不存在（模组降级运行，不崩）|
+| `patches ok=5 failed=0` | 五个补丁全部命中（每行还带命中的程序集名）|
+| `failed>0` + `skip …` | 某个目标在本次版本里不存在（降级运行，不崩）|
 | `mode=off: no patch installed` | 处于关闭模式 |
+| `tap ignored: N fingers down` | 多指手势被正确忽略（不会误开火）|
+| 一条 `debug tool fired` 都没有 | 没有点击被处理，检查模组是否启用 |
+
+开关（改完需重启）：
+
+| 文件 | 取值 | 作用 |
+|---|---|---|
+| `files/game/agentdevtools.mode` | `off` / `auto`（默认）/ `always` | 总开关与吸附模式 |
+| `files/game/agentdevtools.snap` | `off` / `auto` / `always` | 可选的细分覆盖（旧名 `agenttouchfix.snap` 仍可读）|
+| `files/game/agentdevtools.pick` | `port` / `exact` | PortUI 候选列表策略（`exact` 会削弱吸附）|
+
 | 一行 `click …` 都没有 | 没有点击被我们的 prefix 处理，检查是否启用了模组 |
 
 ---

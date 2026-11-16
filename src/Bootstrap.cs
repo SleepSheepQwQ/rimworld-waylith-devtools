@@ -38,7 +38,7 @@ namespace AgentDevTools
                 H = new HarmonyLib.Harmony(HarmonyId);
 
                 int mode = ReadMode();
-                Refl.Info("BUILD 1.2.0 / AgentDevTools " + typeof(Bootstrap).Assembly.GetName().Version
+                Refl.Info("BUILD 1.2.1 / AgentDevTools " + typeof(Bootstrap).Assembly.GetName().Version
                           + " bootstrapping, mode=" + SnapPolicy.Name(mode));
 
                 if (mode == SnapPolicy.Off)
@@ -56,10 +56,10 @@ namespace AgentDevTools
                       MI(typeof(ToolPatches), "HandleMapClicks_Prefix"));
 
                 Patch("PortUI.MobileSelectionController.Tap",
-                      // strict: (Vector3, bool). If a future port changes the signature the patch is
-                      // skipped and reported, instead of binding to an overload nobody calls.
-                      () => Refl.M(Refl.TPrefer("PortUI", "PortUI.MobileSelectionController"), "Tap",
-                                   new[] { "Vector3", "Boolean" }),
+                      // strict first (Vector3, bool); if the port changed the signature, log every
+                      // overload and fall back to a single 2-parameter match so the log shows what
+                      // was actually bound instead of silently doing nothing.
+                      () => TapTarget(),
                       MI(typeof(ToolPatches), "Tap_Prefix"));
 
                 Patch("Verse.UI.MouseCell",
@@ -97,6 +97,31 @@ namespace AgentDevTools
                 return SnapPolicy.Auto;
             }
             catch { return SnapPolicy.Auto; }
+        }
+
+        private static MethodBase TapTarget()
+        {
+            Type t = Refl.TPrefer("PortUI", "PortUI.MobileSelectionController");
+            if (t == null) return null;
+            // 0.0.22: Tap(Vector3, Boolean, Boolean)
+            MethodInfo strict = Refl.M(t, "Tap", new[] { "Vector3", "Boolean", "Boolean" });
+            if (strict == null) strict = Refl.M(t, "Tap", new[] { "Vector3", "Boolean" });
+            if (strict != null) return strict;
+
+            Refl.Warn("Tap has no (Vector3, bool[, bool]) overload; overloads = " + Refl.Overloads(t, "Tap"));
+            // last resort: any Tap whose first parameter is the position
+            foreach (MethodInfo m in t.GetMethods(BindingFlags.Public | BindingFlags.NonPublic |
+                                                  BindingFlags.Instance | BindingFlags.Static))
+            {
+                if (m.Name != "Tap") continue;
+                ParameterInfo[] ps = m.GetParameters();
+                if (ps.Length >= 1 && ps[0].ParameterType.Name == "Vector3")
+                {
+                    Refl.Warn("falling back to " + Signature(m));
+                    return m;
+                }
+            }
+            return null;
         }
 
         private static string Signature(MethodBase m)

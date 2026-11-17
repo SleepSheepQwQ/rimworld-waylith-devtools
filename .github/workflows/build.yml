@@ -66,11 +66,9 @@ jobs:
           cp mod/About/About.xml dist/Pinpoint/About/
           cp "$DLL" dist/Pinpoint/Assemblies/
           (cd dist/Pinpoint && zip -qr ../../Pinpoint.zip .)
-          python3 -c "
-import zipfile,hashlib,os
-z=zipfile.ZipFile('Pinpoint.zip')
-[print(f'  {i.file_size:>7}  {i.filename}') for i in z.infolist()]
-print('size',os.path.getsize('Pinpoint.zip'),'md5',hashlib.md5(open('Pinpoint.zip','rb').read()).hexdigest()[:12])"
+          unzip -l Pinpoint.zip
+          md5sum Pinpoint.zip
+          stat -c '%n %s bytes' Pinpoint.zip
 
       - uses: actions/upload-artifact@v4
         if: steps.refs.outputs.available == 'true'

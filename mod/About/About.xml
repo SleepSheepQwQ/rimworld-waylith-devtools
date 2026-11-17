@@ -1,17 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
-  <name>AgentDevTools</name>
+  <name>Pinpoint</name>
   <author>sleepsheep</author>
-  <packageId>sleepsheep.waylith.devtools</packageId>
-  <modVersion>1.2.1</modVersion>
+  <packageId>sleepsheep.waylith.pinpoint</packageId>
+  <modVersion>2.0.0</modVersion>
   <supportedVersions>
     <li>1.7</li>
   </supportedVersions>
   <description>Precise tapping for the developer tools in the RimWorld 1.7 Android (Waylith) port.
 
-  The port plays taps on the map through its own touch layer, which reports a nearest object instead of the cell the finger is actually on - so debug tools (kill, destroy, damage, spawn) hit the wrong target or nothing at all.
+  The port's touch layer reports the nearest object instead of the cell the finger is on, and never produces the MouseDown that LudeonTK.DebugTool consumes, so debug tools either do nothing or hit the wrong target. Pinpoint pins UI.MouseCell()/UI.MouseMapPosition() to the tap for the click action and accepts a snapped target only inside the thing's own footprint or within 16 dp of its projected DrawPos (never more than half a cell on screen).
 
-  This mod translates the tap into the exact cell and only snaps to an object when the finger really lands on it. Three modes (off / auto / always) via files/game/agentdevtools.mode; every click is logged with the decision it took.
-
-  No game file is modified; everything is applied at runtime with Harmony.</description>
+  Modes off/auto/always via files/game/pinpoint.mode; every click is logged with the decision it took. No game file is modified; everything is applied at runtime with Harmony.</description>
 </ModMetaData>

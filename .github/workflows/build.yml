@@ -55,7 +55,7 @@ jobs:
         if: steps.refs.outputs.available == 'true'
         run: dotnet build AgentDevTools.csproj -c Release -v minimal
 
-      - name: Package (flat zip: About/ + Assemblies/ at the root)
+      - name: Package the mod (flat zip layout)
         if: steps.refs.outputs.available == 'true'
         run: |
           echo "--- produced ---"

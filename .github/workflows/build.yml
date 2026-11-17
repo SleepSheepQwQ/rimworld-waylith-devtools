@@ -1,0 +1,85 @@
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag to publish (e.g. v2.0.0). Leave empty to only build.'
+        required: false
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Unit tests (snap policy)
+        run: dotnet test tests/SnapPolicy/SnapPolicy.csproj -c Release -v minimal
+
+  package:
+    runs-on: ubuntu-latest
+    needs: policy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # The engine layer compiles against the port's reference assemblies, which are never shipped
+      # in this repo. They are pulled from the private dlls repo when the token is configured.
+      - name: Fetch reference assemblies
+        id: refs
+        env:
+          DLLS_TOKEN: ${{ secrets.DLLS_TOKEN }}
+        run: |
+          if [ -z "$DLLS_TOKEN" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::DLLS_TOKEN is not configured - skipping the engine build and packaging. Add the secret to enable releases."
+            exit 0
+          fi
+          mkdir -p dlls
+          for f in Assembly-CSharp.dll 0Harmony.dll; do
+            curl -fsSL -H "Authorization: Bearer $DLLS_TOKEN" \
+                 -H "Accept: application/vnd.github.raw" \
+                 -o "dlls/$f" \
+                 "https://api.github.com/repos/SleepSheepQwQ/rimworld-waylith-re/contents/dlls/$f"
+          done
+          ls -l dlls
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      - name: Build the mod
+        if: steps.refs.outputs.available == 'true'
+        run: dotnet build AgentDevTools.csproj -c Release -v minimal
+
+      - name: Package (flat zip: About/ + Assemblies/ at the root)
+        if: steps.refs.outputs.available == 'true'
+        run: |
+          echo "--- produced ---"
+          find bin/Release -name '*.dll' -printf '%p %s bytes\n' | sort
+          DLL=$(find bin/Release -name 'Pinpoint.dll' | head -1)
+          test -n "$DLL" || { echo "no Pinpoint.dll produced"; exit 1; }
+          mkdir -p dist/Pinpoint/About dist/Pinpoint/Assemblies
+          cp mod/About/About.xml dist/Pinpoint/About/
+          cp "$DLL" dist/Pinpoint/Assemblies/
+          (cd dist/Pinpoint && zip -qr ../../Pinpoint.zip .)
+          python3 -c "
+import zipfile,hashlib,os
+z=zipfile.ZipFile('Pinpoint.zip')
+[print(f'  {i.file_size:>7}  {i.filename}') for i in z.infolist()]
+print('size',os.path.getsize('Pinpoint.zip'),'md5',hashlib.md5(open('Pinpoint.zip','rb').read()).hexdigest()[:12])"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.refs.outputs.available == 'true'
+        with:
+          name: Pinpoint
+          path: Pinpoint.zip
+
+      - name: Publish release
+        if: steps.refs.outputs.available == 'true' && github.event.inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ github.event.inputs.release_tag }}" Pinpoint.zip --repo "$GITHUB_REPOSITORY" --title "Pinpoint ${{ github.event.inputs.release_tag }}" --notes-file docs/RELEASE_NOTES.md

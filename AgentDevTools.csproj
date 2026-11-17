@@ -2,12 +2,12 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <AssemblyName>AgentDevTools</AssemblyName>
+    <AssemblyName>Pinpoint</AssemblyName>
     <RootNamespace>AgentDevTools</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <Version>1.2.1</Version>
+    <Version>2.0.0</Version>
     <Deterministic>true</Deterministic>
     <DebugType>none</DebugType>
     <Optimize>true</Optimize>
